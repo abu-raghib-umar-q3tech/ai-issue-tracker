@@ -1,0 +1,48 @@
+export type TicketStatus = 'Todo' | 'In Progress' | 'Done';
+
+export type TicketPriority = 'Low' | 'Medium' | 'High';
+
+export interface Ticket {
+  _id: string;
+  title: string;
+  description: string;
+  status: TicketStatus;
+  priority: TicketPriority;
+  tags: string[];
+  estimatedTime: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface GetTicketsParams {
+  page?: number;
+  limit?: number;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+}
+
+export interface GetTicketsResponse {
+  tickets: Ticket[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface CreateTicketRequest {
+  title: string;
+  description: string;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  tags?: string[];
+  estimatedTime?: string;
+}
+
+export interface UpdateTicketRequest {
+  status: TicketStatus;
+}
+
+export interface UpdateTicketPayload {
+  id: string;
+  data: UpdateTicketRequest;
+}
