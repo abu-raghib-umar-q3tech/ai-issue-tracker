@@ -11,11 +11,10 @@ interface HealthResponse {
 
 const app = express();
 
-app.use(
-  cors({
-    origin: env.clientUrl
-  })
-);
+app.use(cors({
+  origin: "*",
+  credentials: true
+}));
 app.use(express.json());
 
 app.get('/api/health', (_req: Request, res: Response<HealthResponse>) => {
