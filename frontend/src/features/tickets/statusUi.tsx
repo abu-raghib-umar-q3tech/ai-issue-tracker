@@ -4,17 +4,17 @@ type StatusOption = TicketStatus | 'all';
 
 const ticketStatusBadgeClassName: Record<TicketStatus, string> = {
   Todo:
-    'inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3.5 py-1.5 text-sm font-normal tracking-[0.01em] text-slate-600',
+    'inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium tracking-[0.01em] text-slate-600 shadow-sm ring-1 ring-white/80',
   'In Progress':
-    'inline-flex items-center gap-2 rounded-full border border-sky-200 bg-sky-50 px-3.5 py-1.5 text-sm font-normal tracking-[0.01em] text-sky-700',
+    'inline-flex items-center gap-1.5 rounded-full border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium tracking-[0.01em] text-sky-700 shadow-sm ring-1 ring-white/80',
   Done:
-    'inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1.5 text-sm font-normal tracking-[0.01em] text-emerald-700'
+    'inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-medium tracking-[0.01em] text-emerald-700 shadow-sm ring-1 ring-white/80'
 };
 
 const ticketStatusDotClassName: Record<TicketStatus, string> = {
-  Todo: 'bg-slate-400',
-  'In Progress': 'bg-sky-400',
-  Done: 'bg-emerald-400'
+  Todo: 'h-2 w-2 rounded-full bg-slate-400',
+  'In Progress': 'h-2 w-2 rounded-full bg-sky-400 animate-pulse',
+  Done: 'h-2 w-2 rounded-full bg-emerald-400'
 };
 
 const ticketStatusSelectToneClassName: Record<StatusOption, string> = {
@@ -31,7 +31,7 @@ const getTicketStatusSelectClassName = (status: StatusOption): string => {
 const TicketStatusBadge = ({ status }: { status: TicketStatus }) => {
   return (
     <span className={ticketStatusBadgeClassName[status]}>
-      <span aria-hidden="true" className={['h-2.5 w-2.5 rounded-full', ticketStatusDotClassName[status]].join(' ')} />
+      <span aria-hidden="true" className={ticketStatusDotClassName[status]} />
       {status}
     </span>
   );
