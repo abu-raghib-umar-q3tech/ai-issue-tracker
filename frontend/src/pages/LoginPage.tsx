@@ -1,5 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
-import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { ApiErrorAlert } from '../components/ui/ApiErrorAlert';
 import { useLoginMutation } from '../features/auth/authApi';
 import { useAuth } from '../features/auth/AuthProvider';
@@ -22,14 +22,13 @@ const LoginPage = () => {
   const [login, { isLoading, isError, error }] = useLoginMutation();
   const { isAuthenticated, setSession } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
 
   const locationState = location.state as LoginLocationState | null;
   const from = locationState?.from?.pathname ?? '/issues';
   const successMessage = locationState?.message;
 
   if (isAuthenticated) {
-    return <Navigate to="/issues" replace />;
+    return <Navigate to={from} replace />;
   }
 
   const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +50,6 @@ const LoginPage = () => {
       }).unwrap();
 
       setSession(response);
-      navigate(from, { replace: true });
     } catch (_requestError: unknown) {
       // API error is already exposed via RTK Query state.
     }
