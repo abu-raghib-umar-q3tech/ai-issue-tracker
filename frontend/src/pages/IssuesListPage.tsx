@@ -108,6 +108,14 @@ const IssuesListPage = () => {
 
   const tickets = data?.tickets ?? [];
   const totalPages = data?.totalPages ?? 0;
+  const hasActiveFilters = Boolean(debouncedSearch || statusFilter !== 'all' || priorityFilter !== 'all');
+
+  const handleClearFilters = () => {
+    setSearch('');
+    setStatusFilter('all');
+    setPriorityFilter('all');
+    setPage(1);
+  };
 
   return (
     <section className="page-stack">
@@ -221,7 +229,7 @@ const IssuesListPage = () => {
         />
       ) : (
         <>
-          <div className="space-y-4">
+          <div className={`content-appear space-y-4 transition-opacity duration-200 ${isFetching ? 'pointer-events-none opacity-50' : 'opacity-100'}`}>
             {tickets.map((ticket) => (
               <article key={ticket._id} className="app-panel-hover overflow-hidden">
                 {/* Card body — entire area is clickable */}
@@ -338,23 +346,42 @@ const IssuesListPage = () => {
             ))}
 
             {!isLoading && !isError && tickets.length === 0 ? (
-              <EmptyState
-                title="No tickets found"
-                description="Create your first issue"
-                action={
-                  <Link to="/create-issue" className="btn-primary">
-                    Create Issue
-                  </Link>
-                }
-              />
+              hasActiveFilters ? (
+                <EmptyState
+                  title="No results found"
+                  description="No tickets match your current filters."
+                  action={
+                    <button type="button" className="btn-secondary px-4 py-2 text-sm" onClick={handleClearFilters}>
+                      Clear filters
+                    </button>
+                  }
+                />
+              ) : (
+                <EmptyState
+                  title="No tickets yet"
+                  description="Create your first issue to get started."
+                  action={
+                    <Link to="/create-issue" className="btn-primary">
+                      Create Issue
+                    </Link>
+                  }
+                />
+              )
             ) : null}
           </div>
 
           <footer className="app-panel flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="app-meta-text text-slate-600">
-              Page {data?.page ?? page} of {totalPages || 1}
-              {isFetching ? ' (Refreshing...)' : ''}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="app-meta-text text-slate-600">
+                Page {data?.page ?? page} of {totalPages || 1}
+              </p>
+              {isFetching ? (
+                <svg className="h-3.5 w-3.5 animate-spin text-slate-400" viewBox="0 0 24 24" fill="none" aria-label="Refreshing">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+              ) : null}
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"

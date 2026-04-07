@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthProvider';
 
 const navClassName = ({ isActive }: { isActive: boolean }): string =>
@@ -22,10 +22,18 @@ const GlobalLayout = () => {
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur">
         <div className="app-container flex items-center justify-between py-3">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace</p>
-            <p className="text-[0.95rem] font-bold leading-tight text-slate-900">AI Issue Tracker</p>
-          </div>
+          <Link to="/issues" className="group flex items-center gap-2.5 rounded-xl p-1 transition-opacity hover:opacity-80">
+            {/* AI spark icon */}
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-white shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-4 w-4">
+                <path d="M12 2a.75.75 0 0 1 .7.48l1.95 4.9 4.9 1.95a.75.75 0 0 1 0 1.4l-4.9 1.95-1.95 4.9a.75.75 0 0 1-1.4 0l-1.95-4.9-4.9-1.95a.75.75 0 0 1 0-1.4l4.9-1.95L11.3 2.48A.75.75 0 0 1 12 2ZM5.5 15a.5.5 0 0 1 .47.33l.9 2.27 2.27.9a.5.5 0 0 1 0 .94l-2.27.9-.9 2.27a.5.5 0 0 1-.94 0l-.9-2.27-2.27-.9a.5.5 0 0 1 0-.94l2.27-.9.9-2.27A.5.5 0 0 1 5.5 15Z" />
+              </svg>
+            </span>
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace</p>
+              <p className="text-[0.95rem] font-bold leading-tight text-slate-900">AI Issue Tracker</p>
+            </div>
+          </Link>
 
           <nav className="flex items-center gap-1.5">
             <NavLink to="/create-issue" className={navClassName}>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Dark rounded square background -->
+  <rect width="32" height="32" rx="8" fill="#0f172a"/>
+  <!-- Sparkle / AI star icon (white) -->
+  <path fill="white" d="M16 5a.9.9 0 0 1 .84.576l2.34 5.88 5.88 2.34a.9.9 0 0 1 0 1.68l-5.88 2.34-2.34 5.88a.9.9 0 0 1-1.68 0l-2.34-5.88-5.88-2.34a.9.9 0 0 1 0-1.68l5.88-2.34 2.34-5.88A.9.9 0 0 1 16 5Z"/>
+  <!-- Small secondary sparkle -->
+  <path fill="white" opacity="0.7" d="M24 19.5a.4.4 0 0 1 .376.258l.724 1.842 1.842.724a.4.4 0 0 1 0 .752l-1.842.724-.724 1.842a.4.4 0 0 1-.752 0l-.724-1.842-1.842-.724a.4.4 0 0 1 0-.752l1.842-.724.724-1.842A.4.4 0 0 1 24 19.5Z"/>
+</svg>
