@@ -2,10 +2,12 @@ import { showErrorToast, showSuccessToast } from '../../components/ui/toast';
 import { getRtkQueryErrorMessage } from '../../types/api';
 import { baseApi } from '../../services/baseApi';
 import type {
+  AnalyzeTicketRequest,
   CreateTicketRequest,
   GetTicketsParams,
   GetTicketsResponse,
   Ticket,
+  TicketAnalysisResult,
   UpdateTicketPayload
 } from './types';
 
@@ -30,6 +32,10 @@ const buildTicketsQuery = (params: GetTicketsParams | void): string => {
 
   if (params.priority) {
     searchParams.set('priority', params.priority);
+  }
+
+  if (params.search) {
+    searchParams.set('search', params.search);
   }
 
   const search = searchParams.toString();
@@ -80,9 +86,37 @@ const ticketsApi = baseApi.injectEndpoints({
       async onQueryStarted(payload, { queryFulfilled }) {
         try {
           await queryFulfilled;
-          showSuccessToast(`Status updated to ${payload.data.status}`);
+          const message = payload.data.status
+            ? `Status updated to "${payload.data.status}"`
+            : 'Ticket updated successfully';
+          showSuccessToast(message);
         } catch (error: unknown) {
-          showErrorToast(getRtkQueryErrorMessage(error, 'Failed to update ticket status.'));
+          showErrorToast(getRtkQueryErrorMessage(error, 'Failed to update ticket.'));
+        }
+      }
+    }),
+    analyzeTicket: builder.mutation<TicketAnalysisResult, AnalyzeTicketRequest>({
+      query: (payload) => ({
+        url: '/tickets/analyze',
+        method: 'POST',
+        body: payload
+      })
+    }),
+    deleteTicket: builder.mutation<{ message: string }, string>({
+      query: (id) => ({
+        url: `/tickets/${id}`,
+        method: 'DELETE'
+      }),
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'Tickets', id },
+        { type: 'Tickets', id: 'LIST' }
+      ],
+      async onQueryStarted(_id, { queryFulfilled }) {
+        try {
+          await queryFulfilled;
+          showSuccessToast('Ticket deleted successfully');
+        } catch (error: unknown) {
+          showErrorToast(getRtkQueryErrorMessage(error, 'Failed to delete ticket.'));
         }
       }
     })
@@ -90,7 +124,9 @@ const ticketsApi = baseApi.injectEndpoints({
 });
 
 export const {
+  useAnalyzeTicketMutation,
   useCreateTicketMutation,
+  useDeleteTicketMutation,
   useGetTicketsQuery,
   useUpdateTicketMutation
 } = ticketsApi;

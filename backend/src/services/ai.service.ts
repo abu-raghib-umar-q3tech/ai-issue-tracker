@@ -70,8 +70,8 @@ const toAnalysisResult = (value: unknown): TicketAnalysisResult | null => {
   };
 };
 
-const ruleBasedAnalyzeTicket = (description: string): TicketAnalysisResult => {
-  const normalized = description.toLowerCase();
+const ruleBasedAnalyzeTicket = (title: string, description: string): TicketAnalysisResult => {
+  const normalized = `${title} ${description}`.toLowerCase();
 
   let priority: TicketAnalysisResult['priority'] = 'Medium';
 
@@ -104,11 +104,12 @@ const ruleBasedAnalyzeTicket = (description: string): TicketAnalysisResult => {
   };
 };
 
-const analyzeWithOpenAI = async (description: string): Promise<TicketAnalysisResult> => {
+const analyzeWithOpenAI = async (title: string, description: string): Promise<TicketAnalysisResult> => {
   const prompt = [
-    'Analyze this support ticket description and return ONLY valid JSON.',
+    'Analyze this support ticket and return ONLY valid JSON.',
     'JSON format: {"priority":"Low|Medium|High","tags":["string"],"estimatedTime":"string"}',
     'No extra text, no markdown.',
+    `Title: ${title}`,
     `Description: ${description}`
   ].join('\n');
 
@@ -156,9 +157,9 @@ const analyzeWithOpenAI = async (description: string): Promise<TicketAnalysisRes
   return typedResult;
 };
 
-const analyzeTicket = async (description: string): Promise<TicketAnalysisResult> => {
+const analyzeTicket = async (title: string, description: string): Promise<TicketAnalysisResult> => {
   if (!env.useOpenAI) {
-    return ruleBasedAnalyzeTicket(description);
+    return ruleBasedAnalyzeTicket(title, description);
   }
 
   if (!env.openaiApiKey) {
@@ -166,18 +167,18 @@ const analyzeTicket = async (description: string): Promise<TicketAnalysisResult>
       console.warn('OPENAI_API_KEY is not set — using rule-based fallback');
     }
 
-    return ruleBasedAnalyzeTicket(description);
+    return ruleBasedAnalyzeTicket(title, description);
   }
 
   try {
-    return await analyzeWithOpenAI(description);
+    return await analyzeWithOpenAI(title, description);
   } catch (error: unknown) {
     if (env.nodeEnv !== 'production') {
       const message = error instanceof Error ? error.message : 'Unknown OpenAI analysis failure';
       console.warn('OpenAI analysis failed, using rule-based fallback:', message);
     }
 
-    return ruleBasedAnalyzeTicket(description);
+    return ruleBasedAnalyzeTicket(title, description);
   }
 };
 

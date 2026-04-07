@@ -19,16 +19,15 @@ const GlobalLayout = () => {
   };
 
   return (
-    <main className="min-h-screen">
+    <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur">
-        <div className="app-container flex flex-col gap-4 py-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-0.5">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Workspace</p>
-            <h1 className="text-xl font-extrabold text-slate-900 md:text-2xl">AI Issue Tracker</h1>
-            <p className="text-sm text-slate-600">Welcome back, {user?.name ?? 'there'}</p>
+        <div className="app-container flex items-center justify-between py-3">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">Workspace</p>
+            <p className="text-[0.95rem] font-bold leading-tight text-slate-900">AI Issue Tracker</p>
           </div>
 
-          <nav className="flex flex-wrap items-center gap-2">
+          <nav className="flex items-center gap-1.5">
             <NavLink to="/create-issue" className={navClassName}>
               Create Issue
             </NavLink>
@@ -40,17 +39,17 @@ const GlobalLayout = () => {
                 Dashboard
               </NavLink>
             ) : null}
-            <button type="button" onClick={handleLogout} className="btn-secondary">
+            <button type="button" onClick={handleLogout} className="btn-ghost text-slate-500 hover:text-slate-700">
               Logout
             </button>
           </nav>
         </div>
       </header>
 
-      <section className="app-container py-6 md:py-8">
+      <main className="app-container py-6 md:py-8">
         <Outlet />
-      </section>
-    </main>
+      </main>
+    </div>
   );
 };
 

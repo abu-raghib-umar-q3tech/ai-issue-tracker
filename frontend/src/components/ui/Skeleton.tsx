@@ -12,36 +12,37 @@ const SkeletonBlock = ({ className = '' }: SkeletonBlockProps) => {
 
 const TicketCardSkeleton = () => {
   return (
-    <article className="app-panel-hover" aria-hidden="true">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <SkeletonBlock className="h-7 w-52 max-w-full rounded-xl" />
-            <SkeletonBlock className="h-6 w-24 rounded-full" />
+    <article className="app-panel-hover overflow-hidden" aria-hidden="true">
+      <div className="space-y-3 p-5">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <SkeletonBlock className="h-6 w-48 max-w-full rounded-lg" />
+            <SkeletonBlock className="h-5 w-24 rounded-full" />
           </div>
-
-          <div className="space-y-2">
-            <SkeletonBlock className="h-4 w-full rounded-lg" />
-            <SkeletonBlock className="h-4 w-[92%] rounded-lg" />
-            <SkeletonBlock className="h-4 w-[68%] rounded-lg" />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <SkeletonBlock className="h-6 w-28 rounded-full" />
-            <SkeletonBlock className="h-6 w-24 rounded-full" />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <SkeletonBlock className="h-7 w-20 rounded-full" />
-            <SkeletonBlock className="h-7 w-24 rounded-full" />
-            <SkeletonBlock className="h-7 w-16 rounded-full" />
-          </div>
+          <SkeletonBlock className="h-4 w-20 shrink-0 rounded-md" />
         </div>
-
-        <div className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 lg:w-56">
-          <SkeletonBlock className="mb-2 h-3 w-16 rounded-lg" />
-          <SkeletonBlock className="h-11 w-full rounded-xl" />
-          <SkeletonBlock className="mt-2 h-3 w-28 rounded-lg" />
+        <div className="flex gap-2">
+          <SkeletonBlock className="h-5 w-16 rounded-full" />
+          <SkeletonBlock className="h-5 w-28 rounded-full" />
+        </div>
+        <div className="space-y-1.5">
+          <SkeletonBlock className="h-4 w-full rounded-lg" />
+          <SkeletonBlock className="h-4 w-[85%] rounded-lg" />
+        </div>
+        <div className="flex gap-1.5">
+          <SkeletonBlock className="h-5 w-14 rounded-full" />
+          <SkeletonBlock className="h-5 w-20 rounded-full" />
+          <SkeletonBlock className="h-5 w-16 rounded-full" />
+        </div>
+      </div>
+      <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50/60 px-5 py-3">
+        <div className="flex items-center gap-2">
+          <SkeletonBlock className="h-4 w-12 rounded-md" />
+          <SkeletonBlock className="h-8 w-32 rounded-xl" />
+        </div>
+        <div className="flex gap-2">
+          <SkeletonBlock className="h-8 w-24 rounded-xl" />
+          <SkeletonBlock className="h-8 w-16 rounded-xl" />
         </div>
       </div>
     </article>
@@ -61,9 +62,12 @@ const TicketListSkeleton = ({ count = 4 }: TicketListSkeletonProps) => {
 const MetricCardSkeleton = () => {
   return (
     <article className="app-panel-hover" aria-hidden="true">
-      <SkeletonBlock className="h-1.5 w-14 rounded-full" />
-      <SkeletonBlock className="mt-3 h-3 w-24 rounded-lg" />
-      <SkeletonBlock className="mt-2 h-10 w-20 rounded-xl" />
+      <div className="flex items-start justify-between gap-3">
+        <SkeletonBlock className="h-3 w-20 rounded-lg" />
+        <SkeletonBlock className="h-8 w-8 flex-none rounded-lg" />
+      </div>
+      <SkeletonBlock className="mt-3 h-9 w-16 rounded-xl" />
+      <SkeletonBlock className="mt-4 h-0.5 w-full rounded-full" />
     </article>
   );
 };
@@ -97,7 +101,8 @@ const ChartPanelSkeleton = ({ variant }: { variant: 'pie' | 'bar' }) => {
 const DashboardSkeleton = () => {
   return (
     <>
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
+        <MetricCardSkeleton />
         <MetricCardSkeleton />
         <MetricCardSkeleton />
         <MetricCardSkeleton />
