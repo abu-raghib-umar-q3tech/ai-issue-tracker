@@ -103,14 +103,6 @@ const CreateIssuePage = () => {
         <p className="app-subheading">Describe the issue once and let AI generate priority, tags, and estimated time.</p>
       </header>
 
-      <section className="app-panel border-sky-200 bg-sky-50/70">
-        <h2 className="app-section-title text-sky-900">AI Assist Enabled</h2>
-        <p className="app-description mt-2 text-sky-900">
-          After submission, AI will enrich the ticket with <span className="font-semibold">priority</span>,{' '}
-          <span className="font-semibold">tags</span>, and <span className="font-semibold">estimated time</span>.
-        </p>
-      </section>
-
       <form className="app-panel app-form" onSubmit={handleSubmit}>
         <fieldset disabled={isLoading} className="space-y-5 border-0 p-0 m-0 min-w-0">
           <div className="app-form-group">

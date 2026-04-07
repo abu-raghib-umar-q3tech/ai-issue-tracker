@@ -17,10 +17,17 @@ interface CreateTicketRequestBody {
 }
 
 interface UpdateTicketRequestBody {
+  title?: string;
+  description?: string;
   status?: TicketStatus;
   priority?: TicketPriority;
   tags?: string[];
   estimatedTime?: string;
+}
+
+interface AnalyzeTicketRequestBody {
+  title: string;
+  description: string;
 }
 
 interface TicketRouteParams {
@@ -32,6 +39,7 @@ interface GetTicketsQueryParams {
   limit?: string;
   status?: string;
   priority?: string;
+  search?: string;
 }
 
 interface ListTicketsFilters {
@@ -41,6 +49,7 @@ interface ListTicketsFilters {
   priority?: TicketPriority;
   userId: string;
   role: string;
+  search?: string;
 }
 
 interface TicketAnalysisResult {
@@ -78,6 +87,7 @@ const isTicketPriority = (value: unknown): value is TicketPriority => {
 export { isTicketPriority, isTicketStatus };
 
 export type {
+  AnalyzeTicketRequestBody,
   CreateTicketInput,
   CreateTicketRequestBody,
   GetTicketsQueryParams,

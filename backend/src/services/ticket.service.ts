@@ -36,7 +36,7 @@ const createTicket = async (payload: CreateTicketRequestBody, userId: string): P
     throw makeAppError('Invalid authenticated user', 401);
   }
 
-  const analysis = await analyzeTicket(description);
+  const analysis = await analyzeTicket(title, description);
 
   const createInput: CreateTicketInput = {
     title,
@@ -65,6 +65,12 @@ const listTickets = async (filters: ListTicketsFilters): Promise<TicketListRespo
 
   if (filters.priority) {
     query.priority = filters.priority;
+  }
+
+  if (filters.search) {
+    const escaped = filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(escaped, 'i');
+    query.$or = [{ title: regex }, { description: regex }];
   }
 
   const skip = (filters.page - 1) * filters.limit;
@@ -107,6 +113,8 @@ const updateTicket = async (
 
   const updates: Partial<TicketAttributes> = {};
 
+  if (payload.title !== undefined) updates.title = payload.title.trim();
+  if (payload.description !== undefined) updates.description = payload.description.trim();
   if (payload.status !== undefined) updates.status = payload.status;
   if (payload.priority !== undefined) updates.priority = payload.priority;
   if (payload.tags !== undefined) updates.tags = payload.tags.map(normalizeTag).filter(Boolean);
@@ -121,4 +129,27 @@ const updateTicket = async (
   return ticket;
 };
 
-export { createTicket, listTickets, updateTicket };
+const deleteTicket = async (
+  ticketId: string,
+  requestingUserId: string,
+  requestingUserRole: string
+): Promise<TicketDocument | null> => {
+  if (!Types.ObjectId.isValid(ticketId)) {
+    throw makeAppError('Invalid ticket id', 400);
+  }
+
+  const existing = await Ticket.findById(ticketId).exec();
+
+  if (!existing) {
+    return null;
+  }
+
+  if (requestingUserRole !== 'admin' && existing.createdBy.toString() !== requestingUserId) {
+    throw makeAppError('Forbidden: you do not own this ticket', 403);
+  }
+
+  await Ticket.findByIdAndDelete(ticketId).exec();
+  return existing;
+};
+
+export { createTicket, deleteTicket, listTickets, updateTicket };

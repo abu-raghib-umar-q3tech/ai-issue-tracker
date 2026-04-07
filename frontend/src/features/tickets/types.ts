@@ -19,6 +19,7 @@ export interface GetTicketsParams {
   limit?: number;
   status?: TicketStatus;
   priority?: TicketPriority;
+  search?: string;
 }
 
 export interface GetTicketsResponse {
@@ -39,6 +40,8 @@ export interface CreateTicketRequest {
 }
 
 export interface UpdateTicketRequest {
+  title?: string;
+  description?: string;
   status?: TicketStatus;
   priority?: TicketPriority;
   tags?: string[];
@@ -48,4 +51,15 @@ export interface UpdateTicketRequest {
 export interface UpdateTicketPayload {
   id: string;
   data: UpdateTicketRequest;
+}
+
+export interface AnalyzeTicketRequest {
+  title: string;
+  description: string;
+}
+
+export interface TicketAnalysisResult {
+  priority: TicketPriority;
+  tags: string[];
+  estimatedTime: string;
 }
