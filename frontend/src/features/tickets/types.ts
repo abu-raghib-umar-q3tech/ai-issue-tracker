@@ -39,7 +39,10 @@ export interface CreateTicketRequest {
 }
 
 export interface UpdateTicketRequest {
-  status: TicketStatus;
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  tags?: string[];
+  estimatedTime?: string;
 }
 
 export interface UpdateTicketPayload {

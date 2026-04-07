@@ -1,12 +1,13 @@
 import { useMemo, useState, type ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { EditTicketModal } from '../components/ui/EditTicketModal';
 import { EmptyState } from '../components/ui/EmptyState';
 import { ApiErrorAlert } from '../components/ui/ApiErrorAlert';
 import { TicketListSkeleton } from '../components/ui/Skeleton';
 import { TicketPriorityBadge } from '../features/tickets/priorityUi';
 import { TicketStatusBadge, getTicketStatusSelectClassName } from '../features/tickets/statusUi';
 import { useGetTicketsQuery, useUpdateTicketMutation } from '../features/tickets/ticketsApi';
-import type { TicketPriority, TicketStatus } from '../features/tickets/types';
+import type { Ticket, TicketPriority, TicketStatus, UpdateTicketRequest } from '../features/tickets/types';
 import { useInitialLoadSkeleton } from '../hooks/useInitialLoadSkeleton';
 
 type StatusFilter = 'all' | TicketStatus;
@@ -21,6 +22,7 @@ const IssuesListPage = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>('all');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [editingTicket, setEditingTicket] = useState<Ticket | null>(null);
 
   const queryArgs = useMemo(
     () => ({
@@ -49,6 +51,12 @@ const IssuesListPage = () => {
   const handleLimitChange = (event: ChangeEvent<HTMLSelectElement>) => {
     setLimit(Number(event.target.value));
     setPage(1);
+  };
+
+  const handleSaveEdit = async (data: UpdateTicketRequest): Promise<void> => {
+    if (!editingTicket) return;
+    await updateTicket({ id: editingTicket._id, data }).unwrap();
+    setEditingTicket(null);
   };
 
   const handleStatusUpdate = async (ticketId: string, status: TicketStatus) => {
@@ -145,6 +153,14 @@ const IssuesListPage = () => {
                         <span className="app-meta-text text-gray-500">No tags</span>
                       )}
                     </div>
+
+                    <button
+                      type="button"
+                      className="btn-secondary px-3 py-1.5 text-xs"
+                      onClick={() => setEditingTicket(ticket)}
+                    >
+                      Edit AI Fields
+                    </button>
                   </div>
 
                   <div className="w-full rounded-xl border border-slate-200 bg-slate-50 p-3 lg:w-56">
@@ -162,6 +178,7 @@ const IssuesListPage = () => {
                     {updatingId === ticket._id ? <p className="app-meta-text mt-2">Updating status...</p> : null}
                   </div>
                 </div>
+
               </article>
             ))}
 
@@ -204,6 +221,13 @@ const IssuesListPage = () => {
           </footer>
         </>
       )}
+      {editingTicket ? (
+        <EditTicketModal
+          ticket={editingTicket}
+          onClose={() => setEditingTicket(null)}
+          onSave={handleSaveEdit}
+        />
+      ) : null}
     </section>
   );
 };

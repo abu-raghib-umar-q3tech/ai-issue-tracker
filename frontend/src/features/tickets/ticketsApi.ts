@@ -80,9 +80,12 @@ const ticketsApi = baseApi.injectEndpoints({
       async onQueryStarted(payload, { queryFulfilled }) {
         try {
           await queryFulfilled;
-          showSuccessToast(`Status updated to ${payload.data.status}`);
+          const message = payload.data.status
+            ? `Status updated to "${payload.data.status}"`
+            : 'Ticket updated successfully';
+          showSuccessToast(message);
         } catch (error: unknown) {
-          showErrorToast(getRtkQueryErrorMessage(error, 'Failed to update ticket status.'));
+          showErrorToast(getRtkQueryErrorMessage(error, 'Failed to update ticket.'));
         }
       }
     })

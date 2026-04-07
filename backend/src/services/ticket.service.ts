@@ -6,7 +6,7 @@ import type {
   CreateTicketRequestBody,
   ListTicketsFilters,
   TicketListResponse,
-  UpdateTicketStatusRequestBody
+  UpdateTicketRequestBody
 } from '../types/ticket.js';
 import type { AppError } from '../types/http.js';
 
@@ -85,26 +85,40 @@ const listTickets = async (filters: ListTicketsFilters): Promise<TicketListRespo
   };
 };
 
-const updateTicketStatus = async (
+const updateTicket = async (
   ticketId: string,
-  payload: UpdateTicketStatusRequestBody
+  payload: UpdateTicketRequestBody,
+  requestingUserId: string,
+  requestingUserRole: string
 ): Promise<TicketDocument | null> => {
   if (!Types.ObjectId.isValid(ticketId)) {
     throw makeAppError('Invalid ticket id', 400);
   }
 
+  const existing = await Ticket.findById(ticketId).exec();
+
+  if (!existing) {
+    return null;
+  }
+
+  if (requestingUserRole !== 'admin' && existing.createdBy.toString() !== requestingUserId) {
+    throw makeAppError('Forbidden: you do not own this ticket', 403);
+  }
+
+  const updates: Partial<TicketAttributes> = {};
+
+  if (payload.status !== undefined) updates.status = payload.status;
+  if (payload.priority !== undefined) updates.priority = payload.priority;
+  if (payload.tags !== undefined) updates.tags = payload.tags.map(normalizeTag).filter(Boolean);
+  if (payload.estimatedTime !== undefined) updates.estimatedTime = payload.estimatedTime.trim();
+
   const ticket = await Ticket.findByIdAndUpdate(
     ticketId,
-    {
-      status: payload.status
-    },
-    {
-      new: true,
-      runValidators: true
-    }
+    updates,
+    { new: true, runValidators: true }
   ).exec();
 
   return ticket;
 };
 
-export { createTicket, listTickets, updateTicketStatus };
+export { createTicket, listTickets, updateTicket };

@@ -16,8 +16,11 @@ interface CreateTicketRequestBody {
   estimatedTime?: string;
 }
 
-interface UpdateTicketStatusRequestBody {
-  status: TicketStatus;
+interface UpdateTicketRequestBody {
+  status?: TicketStatus;
+  priority?: TicketPriority;
+  tags?: string[];
+  estimatedTime?: string;
 }
 
 interface TicketRouteParams {
@@ -82,5 +85,5 @@ export type {
   TicketAnalysisResult,
   TicketListResponse,
   TicketRouteParams,
-  UpdateTicketStatusRequestBody
+  UpdateTicketRequestBody
 };

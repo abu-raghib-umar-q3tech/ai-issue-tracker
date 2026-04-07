@@ -12,8 +12,7 @@ const connectDB = async (): Promise<void> => {
 
     if (message.includes('ECONNREFUSED')) {
       console.error(
-        `MongoDB is not running or not reachable at ${env.mongoUri}. ` +
-          'Start a MongoDB server locally or update MONGO_URI in backend/.env to a valid MongoDB Atlas URI.'
+        `MongoDB is not running or not reachable at ${env.mongoUri}. `
       );
     }
 

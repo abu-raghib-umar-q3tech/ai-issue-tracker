@@ -1,6 +1,6 @@
 import type { Request, Response } from 'express';
 import { type TicketDocument } from '../models/ticket.model.js';
-import { createTicket, listTickets, updateTicketStatus } from '../services/ticket.service.js';
+import { createTicket, listTickets, updateTicket } from '../services/ticket.service.js';
 import type { MessageResponse } from '../types/http.js';
 import {
   isTicketPriority,
@@ -9,7 +9,7 @@ import {
   type GetTicketsQueryParams,
   type TicketListResponse,
   type TicketRouteParams,
-  type UpdateTicketStatusRequestBody
+  type UpdateTicketRequestBody
 } from '../types/ticket.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 
@@ -86,19 +86,54 @@ const getTicketsHandler = asyncHandler(
   }
 );
 
-const updateTicketStatusHandler = asyncHandler(
+const updateTicketHandler = asyncHandler(
   async (
-    req: Request<TicketRouteParams, TicketDocument | MessageResponse, UpdateTicketStatusRequestBody>,
+    req: Request<TicketRouteParams, TicketDocument | MessageResponse, UpdateTicketRequestBody>,
     res: Response<TicketDocument | MessageResponse>
   ): Promise<void> => {
-    if (!isTicketStatus(req.body.status)) {
+    const { status, priority, tags, estimatedTime } = req.body;
+
+    if (
+      status === undefined &&
+      priority === undefined &&
+      tags === undefined &&
+      estimatedTime === undefined
+    ) {
+      res.status(400).json({ message: 'No updatable fields provided' });
+      return;
+    }
+
+    if (status !== undefined && !isTicketStatus(status)) {
       res.status(400).json({ message: 'Invalid ticket status' });
       return;
     }
 
-    const ticket = await updateTicketStatus(req.params.id, {
-      status: req.body.status
-    });
+    if (priority !== undefined && !isTicketPriority(priority)) {
+      res.status(400).json({ message: 'Invalid ticket priority' });
+      return;
+    }
+
+    if (tags !== undefined) {
+      if (!Array.isArray(tags) || tags.some((t) => typeof t !== 'string')) {
+        res.status(400).json({ message: 'tags must be an array of strings' });
+        return;
+      }
+    }
+
+    if (estimatedTime !== undefined && (typeof estimatedTime !== 'string' || !estimatedTime.trim())) {
+      res.status(400).json({ message: 'estimatedTime must be a non-empty string' });
+      return;
+    }
+
+    const userId = req.user?.sub;
+    const role = req.user?.role;
+
+    if (!userId || !role) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
+    const ticket = await updateTicket(req.params.id, req.body, userId, role);
 
     if (!ticket) {
       res.status(404).json({ message: 'Ticket not found' });
@@ -109,4 +144,4 @@ const updateTicketStatusHandler = asyncHandler(
   }
 );
 
-export { createTicketHandler, getTicketsHandler, updateTicketStatusHandler };
+export { createTicketHandler, getTicketsHandler, updateTicketHandler };
