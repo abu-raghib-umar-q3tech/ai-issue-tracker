@@ -243,6 +243,21 @@
   }
 }
 
+@keyframes content-appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.content-appear {
+  animation: content-appear 0.22s ease-out both;
+}
+
 @keyframes global-loader-slide {
   0% {
     transform: translateX(-120%);
