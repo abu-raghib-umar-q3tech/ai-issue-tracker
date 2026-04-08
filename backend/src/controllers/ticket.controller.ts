@@ -1,7 +1,8 @@
 import type { Request, Response } from 'express';
+import { Types } from 'mongoose';
 import { type TicketDocument } from '../models/ticket.model.js';
 import { analyzeTicket } from '../services/ai.service.js';
-import { createTicket, deleteTicket, listTickets, updateTicket } from '../services/ticket.service.js';
+import { createTicket, deleteTicket, getTicketById, listTickets, updateTicket } from '../services/ticket.service.js';
 import type { MessageResponse } from '../types/http.js';
 import {
   isTicketPriority,
@@ -97,7 +98,7 @@ const updateTicketHandler = asyncHandler(
     req: Request<TicketRouteParams, TicketDocument | MessageResponse, UpdateTicketRequestBody>,
     res: Response<TicketDocument | MessageResponse>
   ): Promise<void> => {
-    const { title, description, status, priority, tags, estimatedTime } = req.body;
+    const { title, description, status, priority, tags, estimatedTime, assignedTo } = req.body;
 
     if (
       title === undefined &&
@@ -105,7 +106,8 @@ const updateTicketHandler = asyncHandler(
       status === undefined &&
       priority === undefined &&
       tags === undefined &&
-      estimatedTime === undefined
+      estimatedTime === undefined &&
+      assignedTo === undefined
     ) {
       res.status(400).json({ message: 'No updatable fields provided' });
       return;
@@ -143,6 +145,11 @@ const updateTicketHandler = asyncHandler(
       return;
     }
 
+    if (assignedTo !== undefined && (typeof assignedTo !== 'string' || !Types.ObjectId.isValid(assignedTo))) {
+      res.status(400).json({ message: 'assignedTo must be a valid user id' });
+      return;
+    }
+
     const userId = req.user?.sub;
     const role = req.user?.role;
 
@@ -155,6 +162,35 @@ const updateTicketHandler = asyncHandler(
 
     if (!ticket) {
       res.status(404).json({ message: 'Ticket not found' });
+      return;
+    }
+
+    res.status(200).json(ticket);
+  }
+);
+
+const getTicketByIdHandler = asyncHandler(
+  async (
+    req: Request<TicketRouteParams, TicketDocument | MessageResponse, never>,
+    res: Response<TicketDocument | MessageResponse>
+  ): Promise<void> => {
+    const userId = req.user?.sub;
+    const role = req.user?.role;
+
+    if (!userId || !role) {
+      res.status(401).json({ message: 'Authentication required' });
+      return;
+    }
+
+    const ticket = await getTicketById(req.params.id);
+
+    if (!ticket) {
+      res.status(404).json({ message: 'Ticket not found' });
+      return;
+    }
+
+    if (role !== 'admin' && ticket.createdBy.toString() !== userId) {
+      res.status(403).json({ message: 'Forbidden: you do not own this ticket' });
       return;
     }
 
@@ -208,4 +244,4 @@ const deleteTicketHandler = asyncHandler(
   }
 );
 
-export { analyzeTicketHandler, createTicketHandler, deleteTicketHandler, getTicketsHandler, updateTicketHandler };
+export { analyzeTicketHandler, createTicketHandler, deleteTicketHandler, getTicketByIdHandler, getTicketsHandler, updateTicketHandler };

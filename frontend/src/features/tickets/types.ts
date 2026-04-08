@@ -2,6 +2,12 @@ export type TicketStatus = 'Todo' | 'In Progress' | 'Done';
 
 export type TicketPriority = 'Low' | 'Medium' | 'High';
 
+export interface UserRef {
+  _id: string;
+  name: string;
+  email: string;
+}
+
 export interface Ticket {
   _id: string;
   title: string;
@@ -10,7 +16,8 @@ export interface Ticket {
   priority: TicketPriority;
   tags: string[];
   estimatedTime: string;
-  createdBy: string;
+  createdBy: UserRef;
+  assignedTo: UserRef | null;
   createdAt: string;
 }
 
@@ -37,6 +44,7 @@ export interface CreateTicketRequest {
   priority?: TicketPriority;
   tags?: string[];
   estimatedTime?: string;
+  assignedTo?: string;
 }
 
 export interface UpdateTicketRequest {
@@ -46,6 +54,7 @@ export interface UpdateTicketRequest {
   priority?: TicketPriority;
   tags?: string[];
   estimatedTime?: string;
+  assignedTo?: string;
 }
 
 export interface UpdateTicketPayload {

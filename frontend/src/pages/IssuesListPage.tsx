@@ -1,5 +1,5 @@
-import { useMemo, useState, type ChangeEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { memo, useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { EditTicketModal } from '../components/ui/EditTicketModal';
 import { ViewTicketModal } from '../components/ui/ViewTicketModal';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -7,15 +7,154 @@ import { ApiErrorAlert } from '../components/ui/ApiErrorAlert';
 import { TicketListSkeleton } from '../components/ui/Skeleton';
 import { TicketPriorityBadge } from '../features/tickets/priorityUi';
 import { TicketStatusBadge, getTicketStatusSelectClassName } from '../features/tickets/statusUi';
-import { useDeleteTicketMutation, useGetTicketsQuery, useUpdateTicketMutation } from '../features/tickets/ticketsApi';
+import { useDeleteTicketMutation, useGetTicketByIdQuery, useGetTicketsQuery, useUpdateTicketMutation } from '../features/tickets/ticketsApi';
 import type { Ticket, TicketPriority, TicketStatus, UpdateTicketRequest } from '../features/tickets/types';
 import { KanbanBoard } from '../components/ui/KanbanBoard';
 import { useDebounce } from '../hooks/useDebounce';
 import { useInitialLoadSkeleton } from '../hooks/useInitialLoadSkeleton';
+import { useAuth } from '../features/auth/AuthProvider';
 
 const formatDate = (iso: string): string => {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 };
+
+const NO_PERMISSION_TOOLTIP = "You don't have permission to change this ticket";
+
+interface IssueCardProps {
+  ticket: Ticket;
+  canEdit: boolean;
+  isUpdating: boolean;
+  isConfirmingDelete: boolean;
+  onView: (ticket: Ticket) => void;
+  onEdit: (ticket: Ticket) => void;
+  onDeleteRequest: (id: string) => void;
+  onDeleteCancel: () => void;
+  onDeleteConfirm: (id: string) => void;
+  onStatusChange: (id: string, status: TicketStatus) => void;
+}
+
+const IssueCard = memo(({ ticket, canEdit, isUpdating, isConfirmingDelete, onView, onEdit, onDeleteRequest, onDeleteCancel, onDeleteConfirm, onStatusChange }: IssueCardProps) => (
+  <article className="app-panel-hover overflow-hidden">
+    <div
+      role="button"
+      tabIndex={0}
+      className="cursor-pointer space-y-2.5 p-5 hover:bg-slate-50/50 transition-colors duration-150"
+      onClick={() => onView(ticket)}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onView(ticket); }}
+    >
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          <h2 className="app-card-title">{ticket.title}</h2>
+          <TicketStatusBadge status={ticket.status} />
+        </div>
+        <span className="app-meta-text shrink-0 text-slate-400">
+          {formatDate(ticket.createdAt)}
+        </span>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-1.5">
+        <TicketPriorityBadge priority={ticket.priority} />
+        {ticket.tags.slice(0, 3).map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-100/70 px-2.5 py-0.5 text-[11px] font-medium text-gray-500"
+          >
+            {tag}
+          </span>
+        ))}
+        {ticket.tags.length > 3 ? (
+          <span className="text-[11px] font-medium text-slate-400">+{ticket.tags.length - 3} more</span>
+        ) : null}
+      </div>
+
+      <p className="line-clamp-2 break-words text-sm leading-relaxed text-slate-500">
+        {ticket.description}
+      </p>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
+        <p className="text-[11px] text-slate-400">
+          <span className="font-medium text-slate-500">Created by:</span>{' '}{ticket.createdBy.name}
+        </p>
+        <p className="text-[11px] text-slate-400">
+          <span className="font-medium text-slate-500">Assigned to:</span>{' '}{ticket.assignedTo?.name ?? 'Unassigned'}
+        </p>
+      </div>
+    </div>
+
+    <div
+      className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-3"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <div className="flex items-center gap-2">
+        <label className="app-meta-text shrink-0 text-slate-500">Status:</label>
+        <select
+          className={`${getTicketStatusSelectClassName(ticket.status)} py-1 text-xs`}
+          value={ticket.status}
+          disabled={isUpdating || !canEdit}
+          title={!canEdit ? NO_PERMISSION_TOOLTIP : undefined}
+          onChange={(e) => onStatusChange(ticket._id, e.target.value as TicketStatus)}
+        >
+          <option value="Todo">Todo</option>
+          <option value="In Progress">In Progress</option>
+          <option value="Done">Done</option>
+        </select>
+        {isUpdating ? (
+          <span className="app-meta-text text-slate-400">Updating…</span>
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-2">
+        {isConfirmingDelete ? (
+          <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5">
+            <span className="text-xs font-medium text-red-700">Delete this ticket?</span>
+            <button
+              type="button"
+              className="rounded px-2 py-0.5 text-xs font-semibold text-red-700 hover:bg-red-100"
+              onClick={() => onDeleteConfirm(ticket._id)}
+            >
+              Yes, delete
+            </button>
+            <button
+              type="button"
+              className="rounded px-2 py-0.5 text-xs font-medium text-slate-500 hover:bg-slate-100"
+              onClick={onDeleteCancel}
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              disabled={!canEdit}
+              title={!canEdit ? NO_PERMISSION_TOOLTIP : undefined}
+              className="btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => onEdit(ticket)}
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+              </svg>
+              Edit Ticket
+            </button>
+            <button
+              type="button"
+              disabled={!canEdit}
+              title={!canEdit ? NO_PERMISSION_TOOLTIP : undefined}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
+              onClick={() => onDeleteRequest(ticket._id)}
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              Delete
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  </article>
+));
+IssueCard.displayName = 'IssueCard';
 
 type StatusFilter = 'all' | TicketStatus;
 type PriorityFilter = 'all' | TicketPriority;
@@ -24,6 +163,9 @@ const statusOptions: Array<StatusFilter> = ['all', 'Todo', 'In Progress', 'Done'
 const priorityOptions: Array<PriorityFilter> = ['all', 'Low', 'Medium', 'High'];
 
 const IssuesListPage = () => {
+  const { user, isAdmin } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
   const [search, setSearch] = useState<string>('');
@@ -56,9 +198,21 @@ const IssuesListPage = () => {
   );
 
   const { data, isLoading, isError, error, isFetching } = useGetTicketsQuery(queryArgs);
-  const [updateTicket, { isError: isUpdateError, error: updateError }] = useUpdateTicketMutation();
-  const [deleteTicket, { isError: isDeleteError, error: deleteError }] = useDeleteTicketMutation();
+  const [updateTicket] = useUpdateTicketMutation();
+  const [deleteTicket] = useDeleteTicketMutation();
   const showInitialSkeleton = useInitialLoadSkeleton(isLoading && !isError, Boolean(data) || isError);
+
+  // Deep-link from notification: auto-open the referenced ticket
+  const linkedTicketId = (location.state as { openTicketId?: string } | null)?.openTicketId ?? null;
+  const { data: linkedTicket } = useGetTicketByIdQuery(linkedTicketId as string, {
+    skip: !linkedTicketId,
+  });
+  useEffect(() => {
+    if (!linkedTicket) return;
+    setViewingTicket(linkedTicket);
+    // Clear the navigation state so navigating back doesn't re-open the modal
+    navigate('/issues', { replace: true, state: null });
+  }, [linkedTicket, navigate]);
 
   const handleSearch = (event: ChangeEvent<HTMLInputElement>) => {
     setSearch(event.target.value);
@@ -86,25 +240,36 @@ const IssuesListPage = () => {
     setEditingTicket(null);
   };
 
-  const handleDeleteConfirm = async (ticketId: string) => {
+  const handleDeleteConfirm = useCallback(async (ticketId: string) => {
     await deleteTicket(ticketId).unwrap();
     setConfirmDeleteId(null);
-  };
+  }, [deleteTicket]);
 
-  const handleStatusUpdate = async (ticketId: string, status: TicketStatus) => {
+  const handleStatusUpdate = useCallback(async (ticketId: string, status: TicketStatus) => {
     setUpdatingId(ticketId);
 
     try {
-      await updateTicket({
-        id: ticketId,
-        data: { status }
-      }).unwrap();
+      await updateTicket({ id: ticketId, data: { status } }).unwrap();
     } catch (_requestError: unknown) {
       // API error is already exposed via RTK Query state.
     } finally {
       setUpdatingId(null);
     }
-  };
+  }, [updateTicket]);
+
+  const handleView = useCallback((ticket: Ticket) => setViewingTicket(ticket), []);
+  const handleEditRequest = useCallback((ticket: Ticket) => setEditingTicket(ticket), []);
+  const handleDeleteRequest = useCallback((id: string) => setConfirmDeleteId(id), []);
+  const handleDeleteCancel = useCallback(() => setConfirmDeleteId(null), []);
+
+  const canEditTicket = useCallback(
+    (ticket: Ticket): boolean => {
+      if (!user) return false;
+      if (isAdmin) return true;
+      return ticket.createdBy._id === user.id || ticket.assignedTo?._id === user.id;
+    },
+    [user, isAdmin]
+  );
 
   const tickets = data?.tickets ?? [];
   const totalPages = data?.totalPages ?? 0;
@@ -212,8 +377,6 @@ const IssuesListPage = () => {
       </section>
 
       {isError ? <ApiErrorAlert error={error} fallbackMessage="Failed to load tickets." /> : null}
-      {isUpdateError ? <ApiErrorAlert error={updateError} fallbackMessage="Failed to update ticket." /> : null}
-      {isDeleteError ? <ApiErrorAlert error={deleteError} fallbackMessage="Failed to delete ticket." /> : null}
 
       {showInitialSkeleton ? (
         <TicketListSkeleton count={4} />
@@ -222,127 +385,26 @@ const IssuesListPage = () => {
           tickets={tickets}
           updatingId={updatingId}
           onStatusChange={handleStatusUpdate}
-          onEdit={(ticket) => setEditingTicket(ticket)}
-          onDelete={async (ticketId) => {
-            await deleteTicket(ticketId).unwrap();
-          }}
+          onEdit={handleEditRequest}
+          onDelete={handleDeleteConfirm}
         />
       ) : (
         <>
           <div className={`content-appear space-y-4 transition-opacity duration-200 ${isFetching ? 'pointer-events-none opacity-50' : 'opacity-100'}`}>
             {tickets.map((ticket) => (
-              <article key={ticket._id} className="app-panel-hover overflow-hidden">
-                {/* Card body — entire area is clickable */}
-                <div
-                  role="button"
-                  tabIndex={0}
-                  className="cursor-pointer space-y-2.5 p-5 hover:bg-slate-50/50 transition-colors duration-150"
-                  onClick={() => setViewingTicket(ticket)}
-                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setViewingTicket(ticket); }}
-                >
-                  {/* Row 1: title + status badge + date */}
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-                      <h2 className="app-card-title">{ticket.title}</h2>
-                      <TicketStatusBadge status={ticket.status} />
-                    </div>
-                    <span className="app-meta-text shrink-0 text-slate-400">
-                      {formatDate(ticket.createdAt)}
-                    </span>
-                  </div>
-
-                  {/* Row 2: priority + tags (max 3) */}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <TicketPriorityBadge priority={ticket.priority} />
-                    {ticket.tags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-100/70 px-2.5 py-0.5 text-[11px] font-medium text-gray-500"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    {ticket.tags.length > 3 ? (
-                      <span className="text-[11px] font-medium text-slate-400">+{ticket.tags.length - 3} more</span>
-                    ) : null}
-                  </div>
-
-                  {/* Row 3: description — 2 line clamp */}
-                  <p className="line-clamp-2 break-words text-sm leading-relaxed text-slate-500">
-                    {ticket.description}
-                  </p>
-                </div>
-
-                {/* Card footer */}
-                <div
-                  className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-5 py-3"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  {/* Status select */}
-                  <div className="flex items-center gap-2">
-                    <label className="app-meta-text shrink-0 text-slate-500">Status:</label>
-                    <select
-                      className={`${getTicketStatusSelectClassName(ticket.status)} py-1 text-xs`}
-                      value={ticket.status}
-                      disabled={updatingId === ticket._id}
-                      onChange={(e) => handleStatusUpdate(ticket._id, e.target.value as TicketStatus)}
-                    >
-                      <option value="Todo">Todo</option>
-                      <option value="In Progress">In Progress</option>
-                      <option value="Done">Done</option>
-                    </select>
-                    {updatingId === ticket._id ? (
-                      <span className="app-meta-text text-slate-400">Updating…</span>
-                    ) : null}
-                  </div>
-
-                  {/* Action buttons */}
-                  <div className="flex items-center gap-2">
-                    {confirmDeleteId === ticket._id ? (
-                      <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-1.5">
-                        <span className="text-xs font-medium text-red-700">Delete this ticket?</span>
-                        <button
-                          type="button"
-                          className="rounded px-2 py-0.5 text-xs font-semibold text-red-700 hover:bg-red-100"
-                          onClick={() => handleDeleteConfirm(ticket._id)}
-                        >
-                          Yes, delete
-                        </button>
-                        <button
-                          type="button"
-                          className="rounded px-2 py-0.5 text-xs font-medium text-slate-500 hover:bg-slate-100"
-                          onClick={() => setConfirmDeleteId(null)}
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <button
-                          type="button"
-                          className="btn-secondary inline-flex items-center gap-1.5 px-3 py-1.5 text-xs"
-                          onClick={() => setEditingTicket(ticket)}
-                        >
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                          </svg>
-                          Edit Ticket
-                        </button>
-                        <button
-                          type="button"
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50"
-                          onClick={() => setConfirmDeleteId(ticket._id)}
-                        >
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                          </svg>
-                          Delete
-                        </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </article>
+              <IssueCard
+                key={ticket._id}
+                ticket={ticket}
+                canEdit={canEditTicket(ticket)}
+                isUpdating={updatingId === ticket._id}
+                isConfirmingDelete={confirmDeleteId === ticket._id}
+                onView={handleView}
+                onEdit={handleEditRequest}
+                onDeleteRequest={handleDeleteRequest}
+                onDeleteCancel={handleDeleteCancel}
+                onDeleteConfirm={handleDeleteConfirm}
+                onStatusChange={handleStatusUpdate}
+              />
             ))}
 
             {!isLoading && !isError && tickets.length === 0 ? (

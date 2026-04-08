@@ -1,6 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { ApiErrorAlert } from '../components/ui/ApiErrorAlert';
 import { useLoginMutation } from '../features/auth/authApi';
 import { useAuth } from '../features/auth/AuthProvider';
 import type { LoginRequest } from '../features/auth/types';
@@ -20,7 +19,7 @@ const initialForm: LoginRequest = {
 const LoginPage = () => {
   const [form, setForm] = useState<LoginRequest>(initialForm);
   const [showPassword, setShowPassword] = useState(false);
-  const [login, { isLoading, isError, error }] = useLoginMutation();
+  const [login, { isLoading }] = useLoginMutation();
   const { isAuthenticated, setSession } = useAuth();
   const location = useLocation();
 
@@ -126,12 +125,16 @@ const LoginPage = () => {
               </div>
             </div>
 
-            <button type="submit" disabled={isLoading} className="btn-primary w-full">
-              {isLoading ? 'Signing in…' : 'Sign In'}
+            <button type="submit" disabled={isLoading} className="btn-primary inline-flex w-full items-center justify-center gap-2">
+              {isLoading ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
+                  Signing in…
+                </>
+              ) : 'Sign In'}
             </button>
           </fieldset>
 
-          {isError ? <ApiErrorAlert error={error} fallbackMessage="Login failed." /> : null}
         </form>
 
         <p className="text-sm text-slate-600">

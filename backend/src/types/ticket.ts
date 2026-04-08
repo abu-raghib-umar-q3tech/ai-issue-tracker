@@ -14,6 +14,7 @@ interface CreateTicketRequestBody {
   priority?: TicketPriority;
   tags?: string[];
   estimatedTime?: string;
+  assignedTo?: string;
 }
 
 interface UpdateTicketRequestBody {
@@ -23,6 +24,7 @@ interface UpdateTicketRequestBody {
   priority?: TicketPriority;
   tags?: string[];
   estimatedTime?: string;
+  assignedTo?: string;
 }
 
 interface AnalyzeTicketRequestBody {
@@ -66,6 +68,7 @@ interface CreateTicketInput {
   tags: string[];
   estimatedTime: string;
   createdBy: Types.ObjectId;
+  assignedTo?: Types.ObjectId | null;
 }
 
 interface TicketListResponse {

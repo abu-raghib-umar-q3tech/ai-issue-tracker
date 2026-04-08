@@ -1,6 +1,5 @@
 import { useState, type ChangeEvent, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { ApiErrorAlert } from '../components/ui/ApiErrorAlert';
 import { useRegisterMutation } from '../features/auth/authApi';
 import { useAuth } from '../features/auth/AuthProvider';
 import type { RegisterRequest } from '../features/auth/types';
@@ -21,7 +20,7 @@ const SignupPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [clientError, setClientError] = useState<string | null>(null);
-  const [register, { isLoading, isError, error }] = useRegisterMutation();
+  const [register, { isLoading }] = useRegisterMutation();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
@@ -184,15 +183,19 @@ const SignupPage = () => {
               </div>
             </div>
 
-            <button type="submit" disabled={isLoading} className="btn-primary w-full">
-              {isLoading ? 'Creating account…' : 'Sign Up'}
+            <button type="submit" disabled={isLoading} className="btn-primary inline-flex w-full items-center justify-center gap-2">
+              {isLoading ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
+                  Creating account…
+                </>
+              ) : 'Sign Up'}
             </button>
           </fieldset>
 
           {clientError ? (
             <p className="rounded-xl border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm font-medium text-red-700">{clientError}</p>
           ) : null}
-          {isError ? <ApiErrorAlert error={error} fallbackMessage="Signup failed." /> : null}
         </form>
 
         <p className="text-sm text-slate-600">

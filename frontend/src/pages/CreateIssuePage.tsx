@@ -1,14 +1,16 @@
 import { useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { AiBadge } from '../components/ui/AiBadge';
-import { ApiErrorAlert } from '../components/ui/ApiErrorAlert';
 import { TicketPriorityBadge } from '../features/tickets/priorityUi';
 import { useCreateTicketMutation } from '../features/tickets/ticketsApi';
 import type { CreateTicketRequest, Ticket, TicketPriority } from '../features/tickets/types';
+import { useAuth } from '../features/auth/AuthProvider';
+import { useGetUsersQuery } from '../features/users/usersApi';
 
 interface CreateIssueFormState {
   title: string;
   description: string;
+  assignedTo: string;
 }
 
 interface TicketAiSummary {
@@ -23,11 +25,6 @@ interface AiInsightCardProps {
   className?: string;
   children: ReactNode;
 }
-
-const initialForm: CreateIssueFormState = {
-  title: '',
-  description: ''
-};
 
 const toAiSummary = (ticket: Ticket): TicketAiSummary => ({
   title: ticket.title,
@@ -60,10 +57,23 @@ const AiInsightCard = ({ label, className = '', children }: AiInsightCardProps) 
 };
 
 const CreateIssuePage = () => {
-  const [form, setForm] = useState<CreateIssueFormState>(initialForm);
+  const { user } = useAuth();
+  const { data: users = [] } = useGetUsersQuery();
+
+  const initialForm: CreateIssueFormState = {
+    title: '',
+    description: '',
+    assignedTo: user?.id ?? ''
+  };
+
+  const [form, setForm] = useState<CreateIssueFormState>(() => ({
+    title: '',
+    description: '',
+    assignedTo: user?.id ?? ''
+  }));
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [aiSummary, setAiSummary] = useState<TicketAiSummary | null>(null);
-  const [createTicket, { isLoading, isError, error }] = useCreateTicketMutation();
+  const [createTicket, { isLoading }] = useCreateTicketMutation();
 
   const handleChange = (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
@@ -81,13 +91,18 @@ const CreateIssuePage = () => {
 
     const payload: CreateTicketRequest = {
       title: form.title.trim(),
-      description: form.description.trim()
+      description: form.description.trim(),
+      assignedTo: form.assignedTo || undefined
     };
 
     try {
       const createdTicket = await createTicket(payload).unwrap();
 
-      setForm(initialForm);
+      setForm({
+        title: '',
+        description: '',
+        assignedTo: user?.id ?? ''
+      });
       setSuccessMessage('Issue created successfully. AI analysis is shown below.');
       setAiSummary(toAiSummary(createdTicket));
     } catch (_requestError: unknown) {
@@ -135,6 +150,25 @@ const CreateIssuePage = () => {
             />
           </div>
 
+          <div className="app-form-group">
+            <label className="app-label" htmlFor="assignedTo">
+              Assign To
+            </label>
+            <select
+              id="assignedTo"
+              name="assignedTo"
+              value={form.assignedTo}
+              onChange={handleChange}
+              className="app-select"
+            >
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}{u.id === user?.id ? ' (you)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="flex flex-wrap items-center gap-3">
             <button type="submit" disabled={isLoading} className="btn-primary">
               {isLoading ? (
@@ -149,7 +183,6 @@ const CreateIssuePage = () => {
           </div>
         </fieldset>
 
-        {isError ? <ApiErrorAlert error={error} fallbackMessage="Failed to create issue." /> : null}
       </form>
 
       {successMessage && aiSummary ? (
