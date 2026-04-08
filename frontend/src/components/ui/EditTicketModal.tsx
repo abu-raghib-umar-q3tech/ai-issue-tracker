@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useAuth } from '../../features/auth/AuthProvider';
 import { useAnalyzeTicketMutation } from '../../features/tickets/ticketsApi';
 import type { Ticket, TicketPriority, UpdateTicketRequest } from '../../features/tickets/types';
+import { useGetUsersQuery } from '../../features/users/usersApi';
 import { getRtkQueryErrorMessage } from '../../types/api';
+import { showErrorToast } from './toast';
 import { AiBadge } from './AiBadge';
 
 type AiField = 'priority' | 'tags' | 'estimatedTime';
@@ -13,6 +16,7 @@ interface Draft {
   priority: TicketPriority;
   tags: string;
   estimatedTime: string;
+  assignedTo: string;
   aiTouched: Set<AiField>;
 }
 
@@ -23,19 +27,20 @@ interface EditTicketModalProps {
 }
 
 const EditTicketModal = ({ ticket, onClose, onSave }: EditTicketModalProps) => {
+  const { user } = useAuth();
+  const { data: users = [] } = useGetUsersQuery();
   const [draft, setDraft] = useState<Draft>(() => ({
     title: ticket.title,
     description: ticket.description,
     priority: ticket.priority,
     tags: ticket.tags.join(', '),
     estimatedTime: ticket.estimatedTime,
+    assignedTo: ticket.assignedTo?._id ?? user?.id ?? '',
     aiTouched: new Set<AiField>()
   }));
   const [analyzeTicket] = useAnalyzeTicketMutation();
   const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const canReanalyze =
@@ -70,7 +75,6 @@ const EditTicketModal = ({ ticket, onClose, onSave }: EditTicketModalProps) => {
 
   const handleReanalyze = async () => {
     setIsAnalyzing(true);
-    setAnalyzeError(null);
     try {
       const result = await analyzeTicket({
         title: draft.title.trim(),
@@ -84,7 +88,7 @@ const EditTicketModal = ({ ticket, onClose, onSave }: EditTicketModalProps) => {
         aiTouched: new Set<AiField>()
       }));
     } catch (err: unknown) {
-      setAnalyzeError(getRtkQueryErrorMessage(err, 'AI analysis failed. Please try again.'));
+      showErrorToast(getRtkQueryErrorMessage(err, 'AI analysis failed. Please try again.'));
     } finally {
       setIsAnalyzing(false);
     }
@@ -96,7 +100,6 @@ const EditTicketModal = ({ ticket, onClose, onSave }: EditTicketModalProps) => {
 
   const handleSave = async () => {
     setIsSaving(true);
-    setSaveError(null);
     try {
       await onSave({
         title: draft.title.trim(),
@@ -106,10 +109,11 @@ const EditTicketModal = ({ ticket, onClose, onSave }: EditTicketModalProps) => {
           .split(',')
           .map((t) => t.trim())
           .filter(Boolean),
-        estimatedTime: draft.estimatedTime.trim()
+        estimatedTime: draft.estimatedTime.trim(),
+        assignedTo: draft.assignedTo || undefined
       });
     } catch (err: unknown) {
-      setSaveError(getRtkQueryErrorMessage(err, 'Failed to save changes.'));
+      showErrorToast(getRtkQueryErrorMessage(err, 'Failed to save changes.'));
       setIsSaving(false);
     }
   };
@@ -153,12 +157,6 @@ const EditTicketModal = ({ ticket, onClose, onSave }: EditTicketModalProps) => {
 
         {/* Body */}
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5" style={{ maxHeight: 'calc(100vh - 180px)' }}>
-          {saveError ? (
-            <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {saveError}
-            </p>
-          ) : null}
-
           {/* Title */}
           <div>
             <label htmlFor="modal-title" className="app-label">
@@ -228,9 +226,6 @@ const EditTicketModal = ({ ticket, onClose, onSave }: EditTicketModalProps) => {
                 )}
               </button>
             </div>
-            {analyzeError ? (
-              <p className="text-xs font-medium text-red-600">{analyzeError}</p>
-            ) : null}
           </div>
 
           {/* Priority */}
@@ -292,6 +287,25 @@ const EditTicketModal = ({ ticket, onClose, onSave }: EditTicketModalProps) => {
             />
             <p className="mt-1.5 text-xs text-slate-400">Separate tags with commas</p>
           </div>
+
+          {/* Assign To */}
+          <div>
+            <label htmlFor="modal-assigned-to" className="app-label">
+              Assign To
+            </label>
+            <select
+              id="modal-assigned-to"
+              className="app-select"
+              value={draft.assignedTo}
+              onChange={(e) => setDraft((prev) => ({ ...prev, assignedTo: e.target.value }))}
+            >
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name}{u.id === user?.id ? ' (you)' : ''}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Footer */}
@@ -306,11 +320,16 @@ const EditTicketModal = ({ ticket, onClose, onSave }: EditTicketModalProps) => {
           </button>
           <button
             type="button"
-            className="btn-primary"
+            className="btn-primary inline-flex items-center gap-2"
             disabled={isSaving || isAnalyzing}
             onClick={handleSave}
           >
-            {isSaving ? 'Saving...' : 'Save Changes'}
+            {isSaving ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
+                Saving…
+              </>
+            ) : 'Save Changes'}
           </button>
         </div>
       </div>

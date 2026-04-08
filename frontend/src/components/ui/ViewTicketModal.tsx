@@ -1,11 +1,28 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { useGetActivityQuery } from '../../features/activity/activityApi';
+import { useCreateCommentMutation, useGetCommentsQuery } from '../../features/comments/commentsApi';
 import { TicketPriorityBadge } from '../../features/tickets/priorityUi';
 import { TicketStatusBadge } from '../../features/tickets/statusUi';
 import type { Ticket } from '../../features/tickets/types';
 
 const formatDate = (iso: string): string =>
     new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+const formatTime = (iso: string): string =>
+    new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+const timeAgo = (iso: string): string => {
+    const seconds = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`;
+    return formatDate(iso);
+};
 
 interface ViewTicketModalProps {
     ticket: Ticket;
@@ -14,14 +31,54 @@ interface ViewTicketModalProps {
     onDelete: () => Promise<void>;
 }
 
+type ActiveTab = 'details' | 'comments' | 'activity';
+
+const TABS: { id: ActiveTab; label: string }[] = [
+    { id: 'details', label: 'Details' },
+    { id: 'comments', label: 'Comments' },
+    { id: 'activity', label: 'Activity' },
+];
+
 const ViewTicketModal = ({ ticket, onClose, onEdit, onDelete }: ViewTicketModalProps) => {
     const overlayRef = useRef<HTMLDivElement>(null);
+    const commentsEndRef = useRef<HTMLDivElement>(null);
+    const [activeTab, setActiveTab] = useState<ActiveTab>('details');
     const [isDescExpanded, setIsDescExpanded] = useState(false);
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [commentText, setCommentText] = useState('');
+
+    const { data: comments = [], isLoading: isLoadingComments, isError: isCommentsError } = useGetCommentsQuery(ticket._id);
+    const { data: activities = [], isLoading: isLoadingActivities, isError: isActivitiesError } = useGetActivityQuery(ticket._id);
+    const [createComment, { isLoading: isPosting }] = useCreateCommentMutation();
+
+    const handlePostComment = async (e: FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const text = commentText.trim();
+        if (!text || isPosting) return;
+        await createComment({ text, ticketId: ticket._id });
+        setCommentText('');
+    };
+
+    const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            const text = commentText.trim();
+            if (!text || isPosting) return;
+            void createComment({ text, ticketId: ticket._id });
+            setCommentText('');
+        }
+    };
+
+    useEffect(() => {
+        if (activeTab === 'comments' && comments.length > 0) {
+            commentsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }
+    }, [comments.length, activeTab]);
 
     // Reset state whenever a new ticket is viewed
     useEffect(() => {
+        setActiveTab('details');
         setIsDescExpanded(false);
         setIsConfirmingDelete(false);
     }, [ticket._id]);
@@ -59,12 +116,18 @@ const ViewTicketModal = ({ ticket, onClose, onEdit, onDelete }: ViewTicketModalP
             >
                 {/* Header */}
                 <div className="flex flex-none items-start justify-between gap-4 border-b border-slate-100 px-6 py-5">
-                    <h2
-                        id="view-modal-title"
-                        className="text-base font-semibold leading-snug text-slate-900"
-                    >
-                        {ticket.title}
-                    </h2>
+                    <div className="min-w-0">
+                        <h2
+                            id="view-modal-title"
+                            className="text-base font-semibold leading-snug text-slate-900"
+                        >
+                            {ticket.title}
+                        </h2>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <TicketStatusBadge status={ticket.status} />
+                            <TicketPriorityBadge priority={ticket.priority} />
+                        </div>
+                    </div>
                     <button
                         type="button"
                         aria-label="Close"
@@ -77,78 +140,195 @@ const ViewTicketModal = ({ ticket, onClose, onEdit, onDelete }: ViewTicketModalP
                     </button>
                 </div>
 
+                {/* Tab bar */}
+                <div className="flex flex-none border-b border-slate-100 px-6">
+                    {TABS.map((tab) => (
+                        <button
+                            key={tab.id}
+                            type="button"
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`relative mr-6 py-3 text-sm font-medium transition-colors ${activeTab === tab.id
+                                ? 'text-slate-900 after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:rounded-full after:bg-slate-800'
+                                : 'text-slate-400 hover:text-slate-600'
+                                }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
                 {/* Body */}
-                <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-                    {/* Status + Priority row */}
-                    <div className="flex flex-wrap items-center gap-2">
-                        <TicketStatusBadge status={ticket.status} />
-                        <TicketPriorityBadge priority={ticket.priority} />
-                    </div>
+                <div className="flex-1 overflow-y-auto px-6 py-5">
 
-                    {/* Description */}
-                    <div>
-                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                            Description
-                        </p>
-                        {ticket.description ? (
-                            <>
-                                <div
-                                    className={`break-words text-sm leading-relaxed text-slate-700 whitespace-pre-wrap transition-all duration-200 ${isDescExpanded
-                                            ? 'max-h-48 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50/60 p-3'
-                                            : 'line-clamp-3'
-                                        }`}
-                                >
-                                    {ticket.description}
-                                </div>
-                                <button
-                                    type="button"
-                                    className="mt-1.5 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors"
-                                    onClick={() => setIsDescExpanded((prev) => !prev)}
-                                >
-                                    {isDescExpanded ? 'See less' : 'See more'}
-                                </button>
-                            </>
-                        ) : (
-                            <p className="text-sm text-slate-400">No description provided.</p>
-                        )}
-                    </div>
-
-                    {/* Meta row: ETA + Created */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                                Estimated Time
-                            </p>
-                            <p className="text-sm font-medium text-slate-700">{ticket.estimatedTime || '—'}</p>
-                        </div>
-                        <div>
-                            <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                                Created
-                            </p>
-                            <p className="text-sm font-medium text-slate-700">{formatDate(ticket.createdAt)}</p>
-                        </div>
-                    </div>
-
-                    {/* Tags */}
-                    <div>
-                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
-                            Tags
-                        </p>
-                        {ticket.tags.length > 0 ? (
-                            <div className="flex flex-wrap gap-1.5">
-                                {ticket.tags.map((tag) => (
-                                    <span
-                                        key={tag}
-                                        className="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-100/70 px-2.5 py-0.5 text-[11px] font-medium text-gray-500"
-                                    >
-                                        {tag}
-                                    </span>
-                                ))}
+                    {/* ── Details Tab ── */}
+                    {activeTab === 'details' && (
+                        <div className="space-y-5">
+                            {/* Description */}
+                            <div>
+                                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                    Description
+                                </p>
+                                {ticket.description ? (
+                                    <>
+                                        <div
+                                            className={`break-words text-sm leading-relaxed text-slate-700 whitespace-pre-wrap transition-all duration-200 ${isDescExpanded
+                                                ? 'max-h-48 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50/60 p-3'
+                                                : 'line-clamp-3'
+                                                }`}
+                                        >
+                                            {ticket.description}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            className="mt-1.5 text-xs font-medium text-slate-400 hover:text-slate-600 transition-colors"
+                                            onClick={() => setIsDescExpanded((prev) => !prev)}
+                                        >
+                                            {isDescExpanded ? 'See less' : 'See more'}
+                                        </button>
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-slate-400">No description provided.</p>
+                                )}
                             </div>
-                        ) : (
-                            <p className="text-sm text-slate-400">No tags</p>
-                        )}
-                    </div>
+
+                            {/* Meta grid */}
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                        Estimated Time
+                                    </p>
+                                    <p className="text-sm font-medium text-slate-700">{ticket.estimatedTime || '—'}</p>
+                                </div>
+                                <div>
+                                    <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                        Created
+                                    </p>
+                                    <p className="text-sm font-medium text-slate-700">{formatDate(ticket.createdAt)}</p>
+                                </div>
+                                <div>
+                                    <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                        Created By
+                                    </p>
+                                    <p className="text-sm font-medium text-slate-700">{ticket.createdBy.name}</p>
+                                </div>
+                                <div>
+                                    <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                        Assigned To
+                                    </p>
+                                    <p className="text-sm font-medium text-slate-700">
+                                        {ticket.assignedTo?.name ?? <span className="text-slate-400">Unassigned</span>}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Tags */}
+                            <div>
+                                <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+                                    Tags
+                                </p>
+                                {ticket.tags.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {ticket.tags.map((tag) => (
+                                            <span
+                                                key={tag}
+                                                className="inline-flex items-center rounded-full border border-slate-200/80 bg-slate-100/70 px-2.5 py-0.5 text-[11px] font-medium text-gray-500"
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-slate-400">No tags</p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ── Comments Tab ── */}
+                    {activeTab === 'comments' && (
+                        <div className="space-y-4">
+                            {/* Comment list */}
+                            <div className="space-y-3">
+                                {isLoadingComments ? (
+                                    <div className="flex items-center gap-2 py-4 text-slate-400">
+                                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-500" aria-hidden="true" />
+                                        <span className="text-sm">Loading comments…</span>
+                                    </div>
+                                ) : isCommentsError ? (
+                                    <p className="text-sm text-red-500">Failed to load comments.</p>
+                                ) : comments.length === 0 ? (
+                                    <p className="text-sm text-slate-400">No comments yet.</p>
+                                ) : (
+                                    comments.map((comment) => (
+                                        <div key={comment._id} className="rounded-xl border border-slate-100 bg-slate-50/60 px-4 py-3">
+                                            <div className="flex items-center justify-between gap-2">
+                                                <span className="text-xs font-semibold text-slate-700">{comment.userId.name}</span>
+                                                <span className="text-[10px] text-slate-400">{formatTime(comment.createdAt)}</span>
+                                            </div>
+                                            <p className="mt-1.5 text-sm leading-relaxed text-slate-600 whitespace-pre-wrap">{comment.text}</p>
+                                        </div>
+                                    ))
+                                )}
+                                <div ref={commentsEndRef} />
+                            </div>
+
+                            {/* Post comment form */}
+                            <form onSubmit={handlePostComment} className="space-y-2 pt-1">
+                                <textarea
+                                    rows={3}
+                                    placeholder="Add a comment… (Enter to submit, Shift+Enter for new line)"
+                                    value={commentText}
+                                    onChange={(e) => setCommentText(e.target.value)}
+                                    onKeyDown={handleTextareaKeyDown}
+                                    disabled={isPosting}
+                                    className="app-textarea"
+                                />
+                                <div className="flex justify-end">
+                                    <button
+                                        type="submit"
+                                        disabled={isPosting || !commentText.trim()}
+                                        className="btn-primary inline-flex items-center gap-2 text-sm px-4 py-2 disabled:opacity-50"
+                                    >
+                                        {isPosting ? (
+                                            <>
+                                                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
+                                                Posting…
+                                            </>
+                                        ) : 'Post Comment'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+
+                    {/* ── Activity Tab ── */}
+                    {activeTab === 'activity' && (
+                        <div>
+                            {isLoadingActivities ? (
+                                <div className="flex items-center gap-2 py-4 text-slate-400">
+                                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-slate-500" aria-hidden="true" />
+                                    <span className="text-sm">Loading activity…</span>
+                                </div>
+                            ) : isActivitiesError ? (
+                                <p className="text-sm text-red-500">Failed to load activity.</p>
+                            ) : activities.length === 0 ? (
+                                <p className="text-sm text-slate-400">No activity yet.</p>
+                            ) : (
+                                <ul className="space-y-2">
+                                    {activities.map((activity) => (
+                                        <li key={activity._id} className="flex items-start gap-2.5">
+                                            <span className="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-slate-300" aria-hidden="true" />
+                                            <div className="min-w-0">
+                                                <span className="text-xs font-semibold text-slate-700">{activity.userId.name}</span>
+                                                <span className="text-xs text-slate-500">{' '}{activity.action}</span>
+                                                <p className="mt-0.5 text-[10px] text-slate-400">{timeAgo(activity.createdAt)}</p>
+                                            </div>
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Footer */}

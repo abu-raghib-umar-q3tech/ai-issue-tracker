@@ -3,6 +3,9 @@ import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-p
 import { TicketPriorityBadge } from '../../features/tickets/priorityUi';
 import type { Ticket, TicketStatus } from '../../features/tickets/types';
 import { ViewTicketModal } from './ViewTicketModal';
+import { useAuth } from '../../features/auth/AuthProvider';
+
+const NO_PERMISSION_TOOLTIP = "You don't have permission to change this ticket";
 
 const COLUMNS: Array<{ status: TicketStatus; dotClass: string; dropBg: string }> = [
     {
@@ -32,6 +35,13 @@ interface KanbanBoardProps {
 
 const KanbanBoard = ({ tickets, updatingId, onStatusChange, onEdit, onDelete }: KanbanBoardProps) => {
     const [viewingTicket, setViewingTicket] = useState<Ticket | null>(null);
+    const { user, isAdmin } = useAuth();
+
+    const canEditTicket = (ticket: Ticket): boolean => {
+        if (!user) return false;
+        if (isAdmin) return true;
+        return ticket.createdBy._id === user.id || ticket.assignedTo?._id === user.id;
+    };
 
     const grouped: Record<TicketStatus, Ticket[]> = {
         Todo: tickets.filter((t) => t.status === 'Todo'),
@@ -79,16 +89,16 @@ const KanbanBoard = ({ tickets, updatingId, onStatusChange, onEdit, onDelete }: 
                                         style={{ minHeight: '12rem', maxHeight: '62vh' }}
                                     >
                                         {grouped[col.status].map((ticket, index) => (
-                                            <Draggable key={ticket._id} draggableId={ticket._id} index={index}>
+                                            <Draggable key={ticket._id} draggableId={ticket._id} index={index} isDragDisabled={!canEditTicket(ticket)}>
                                                 {(dragProvided, dragSnapshot) => (
                                                     <div
                                                         ref={dragProvided.innerRef}
                                                         {...dragProvided.draggableProps}
                                                         {...dragProvided.dragHandleProps}
-                                                        className={`cursor-pointer rounded-xl border bg-white p-3 transition-shadow duration-200 ${dragSnapshot.isDragging
-                                                                ? 'border-slate-300 shadow-lg ring-2 ring-slate-200/80'
-                                                                : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
-                                                            } ${updatingId === ticket._id ? 'opacity-50' : ''}`}
+                                                        className={`rounded-xl border bg-white p-3 transition-shadow duration-200 ${dragSnapshot.isDragging
+                                                            ? 'border-slate-300 shadow-lg ring-2 ring-slate-200/80'
+                                                            : 'border-slate-200 shadow-sm hover:border-slate-300 hover:shadow-md'
+                                                            } ${updatingId === ticket._id ? 'opacity-50' : ''} ${!canEditTicket(ticket) ? 'cursor-default' : 'cursor-pointer'}`}
                                                         onClick={() => {
                                                             if (!dragSnapshot.isDragging) setViewingTicket(ticket);
                                                         }}
@@ -130,6 +140,18 @@ const KanbanBoard = ({ tickets, updatingId, onStatusChange, onEdit, onDelete }: 
                                                             </div>
                                                         ) : null}
 
+                                                        {/* Created by / Assigned to */}
+                                                        <div className="mt-2.5 space-y-0.5">
+                                                            <p className="text-[10px] text-slate-400">
+                                                                <span className="font-medium text-slate-500">Created by:</span>{' '}
+                                                                {ticket.createdBy.name}
+                                                            </p>
+                                                            <p className="text-[10px] text-slate-400">
+                                                                <span className="font-medium text-slate-500">Assigned to:</span>{' '}
+                                                                {ticket.assignedTo?.name ?? 'Unassigned'}
+                                                            </p>
+                                                        </div>
+
                                                         {/* Footer: View + Edit buttons */}
                                                         <div className="mt-3 flex items-center justify-end gap-1.5 border-t border-slate-100 pt-2.5">
                                                             <button
@@ -148,7 +170,9 @@ const KanbanBoard = ({ tickets, updatingId, onStatusChange, onEdit, onDelete }: 
                                                             </button>
                                                             <button
                                                                 type="button"
-                                                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50"
+                                                                disabled={!canEditTicket(ticket)}
+                                                                title={!canEditTicket(ticket) ? NO_PERMISSION_TOOLTIP : undefined}
+                                                                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     onEdit(ticket);

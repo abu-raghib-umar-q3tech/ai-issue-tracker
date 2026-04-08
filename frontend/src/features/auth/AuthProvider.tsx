@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type PropsWith
 import { useDispatch } from 'react-redux';
 import { AUTH_SESSION_EVENT, clearStoredSession, getStoredSession, setStoredSession } from './authStorage';
 import { baseApi } from '../../services/baseApi';
+import { socket } from '../../services/socket';
 import type { AuthSession, AuthUser } from './types';
 
 interface AuthContextValue {
@@ -43,6 +44,33 @@ const AuthProvider = ({ children }: PropsWithChildren) => {
       window.removeEventListener('storage', syncSession);
     };
   }, []);
+
+  // Connect / disconnect socket based on auth state.
+  // On every (re)connect, join the user's personal room for targeted notifications.
+  useEffect(() => {
+    if (!session) {
+      socket.disconnect();
+      return;
+    }
+
+    const userId = session.user.id;
+
+    const handleConnect = () => {
+      socket.emit('join', userId);
+    };
+
+    socket.on('connect', handleConnect);
+    socket.connect();
+
+    // If already connected (e.g. fast hot-reload), join immediately
+    if (socket.connected) {
+      socket.emit('join', userId);
+    }
+
+    return () => {
+      socket.off('connect', handleConnect);
+    };
+  }, [session]);
 
   const value = useMemo<AuthContextValue>(
     () => ({

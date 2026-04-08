@@ -14,6 +14,7 @@ interface TicketAttributes {
   tags: string[];
   estimatedTime: string;
   createdBy: Types.ObjectId;
+  assignedTo: Types.ObjectId | null;
   createdAt: Date;
 }
 
@@ -58,6 +59,11 @@ const ticketSchema = new mongoose.Schema<TicketAttributes>({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+  assignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   },
   createdAt: {
     type: Date,
