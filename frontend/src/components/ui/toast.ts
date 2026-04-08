@@ -22,4 +22,11 @@ const showErrorToast = (message: string): void => {
   });
 };
 
-export { showErrorToast, showSuccessToast };
+const showInfoToast = (message: string): void => {
+  toast.info(message, {
+    ...baseToastOptions,
+    autoClose: 4000
+  });
+};
+
+export { showErrorToast, showInfoToast, showSuccessToast };

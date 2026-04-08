@@ -81,7 +81,8 @@ const ticketsApi = baseApi.injectEndpoints({
       }),
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Tickets', id },
-        { type: 'Tickets', id: 'LIST' }
+        { type: 'Tickets', id: 'LIST' },
+        { type: 'Activity', id }
       ],
       async onQueryStarted(payload, { queryFulfilled }) {
         try {
@@ -101,6 +102,10 @@ const ticketsApi = baseApi.injectEndpoints({
         method: 'POST',
         body: payload
       })
+    }),
+    getTicketById: builder.query<Ticket, string>({
+      query: (id) => `/tickets/${id}`,
+      providesTags: (_result, _error, id) => [{ type: 'Tickets', id }]
     }),
     deleteTicket: builder.mutation<{ message: string }, string>({
       query: (id) => ({
@@ -127,6 +132,7 @@ export const {
   useAnalyzeTicketMutation,
   useCreateTicketMutation,
   useDeleteTicketMutation,
+  useGetTicketByIdQuery,
   useGetTicketsQuery,
   useUpdateTicketMutation
 } = ticketsApi;

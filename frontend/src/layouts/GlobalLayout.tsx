@@ -1,5 +1,7 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthProvider';
+import { useSocketEvents } from '../hooks/useSocketEvents';
+import { NotificationDropdown } from '../components/ui/NotificationDropdown';
 
 const navClassName = ({ isActive }: { isActive: boolean }): string =>
   [
@@ -12,6 +14,8 @@ const navClassName = ({ isActive }: { isActive: boolean }): string =>
 const GlobalLayout = () => {
   const navigate = useNavigate();
   const { user, isAdmin, logout } = useAuth();
+
+  useSocketEvents();
 
   const handleLogout = (): void => {
     logout();
@@ -47,6 +51,7 @@ const GlobalLayout = () => {
                 Dashboard
               </NavLink>
             ) : null}
+            <NotificationDropdown />
             <button type="button" onClick={handleLogout} className="btn-ghost text-slate-500 hover:text-slate-700">
               Logout
             </button>

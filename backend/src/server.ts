@@ -1,15 +1,20 @@
+import { createServer } from 'node:http';
 import { app } from './app.js';
 import { connectDB } from './config/db.js';
 import { env } from './config/env.js';
+import { initSocket } from './config/socket.js';
 
 const startServer = async (): Promise<void> => {
   await connectDB();
 
-  const server = app.listen(env.port, () => {
+  const httpServer = createServer(app);
+  initSocket(httpServer);
+
+  httpServer.listen(env.port, () => {
     console.log(`Server listening on port ${env.port}`);
   });
 
-  server.on('error', (error: NodeJS.ErrnoException) => {
+  httpServer.on('error', (error: NodeJS.ErrnoException) => {
     console.error(`Failed to bind port ${env.port}:`, error.message);
     process.exit(1);
   });

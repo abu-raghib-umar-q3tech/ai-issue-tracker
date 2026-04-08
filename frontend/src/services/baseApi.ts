@@ -54,7 +54,7 @@ const baseQueryWithAuthHandling: BaseQueryFn<string | FetchArgs, unknown, FetchB
 const baseApi = createApi({
   reducerPath: 'api',
   baseQuery: baseQueryWithAuthHandling,
-  tagTypes: ['Tickets'],
+  tagTypes: ['Tickets', 'Comments', 'Activity', 'Notifications'],
   endpoints: () => ({})
 });
 
