@@ -93,7 +93,7 @@ const ticketsApi = baseApi.injectEndpoints({
 
         return [
           { type: 'Tickets', id },
-          ...( isStatusOnly ? [] : [{ type: 'Tickets' as const, id: 'LIST' }] ),
+          ...(isStatusOnly ? [] : [{ type: 'Tickets' as const, id: 'LIST' }]),
           { type: 'Activity', id }
         ];
       },
