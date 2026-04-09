@@ -7,12 +7,13 @@ import { ApiErrorAlert } from '../components/ui/ApiErrorAlert';
 import { TicketListSkeleton } from '../components/ui/Skeleton';
 import { TicketPriorityBadge } from '../features/tickets/priorityUi';
 import { TicketStatusBadge, getTicketStatusSelectClassName } from '../features/tickets/statusUi';
-import { useDeleteTicketMutation, useGetTicketByIdQuery, useGetTicketsQuery, useUpdateTicketMutation } from '../features/tickets/ticketsApi';
+import { useDeleteTicketMutation, useGetTicketByIdQuery, useGetTicketsQuery, useUpdateTicketMutation, ticketsApi } from '../features/tickets/ticketsApi';
 import type { Ticket, TicketPriority, TicketStatus, UpdateTicketRequest } from '../features/tickets/types';
 import { KanbanBoard } from '../components/ui/KanbanBoard';
 import { useDebounce } from '../hooks/useDebounce';
 import { useInitialLoadSkeleton } from '../hooks/useInitialLoadSkeleton';
 import { useAuth } from '../features/auth/AuthProvider';
+import { useAppDispatch } from '../app/hooks';
 
 const formatDate = (iso: string): string => {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -164,6 +165,7 @@ const priorityOptions: Array<PriorityFilter> = ['all', 'Low', 'Medium', 'High'];
 
 const IssuesListPage = () => {
   const { user, isAdmin } = useAuth();
+  const dispatch = useAppDispatch();
   const location = useLocation();
   const navigate = useNavigate();
   const [page, setPage] = useState<number>(1);
@@ -246,16 +248,26 @@ const IssuesListPage = () => {
   }, [deleteTicket]);
 
   const handleStatusUpdate = useCallback(async (ticketId: string, status: TicketStatus) => {
+    // Optimistically move the card immediately — no visible delay
+    const patchResult = dispatch(
+      ticketsApi.util.updateQueryData('getTickets', queryArgs, (draft) => {
+        const ticket = draft.tickets.find((t) => t._id === ticketId);
+        if (ticket) {
+          ticket.status = status;
+        }
+      })
+    );
+
     setUpdatingId(ticketId);
 
     try {
       await updateTicket({ id: ticketId, data: { status } }).unwrap();
     } catch (_requestError: unknown) {
-      // API error is already exposed via RTK Query state.
+      patchResult.undo(); // revert the card back on failure
     } finally {
       setUpdatingId(null);
     }
-  }, [updateTicket]);
+  }, [dispatch, queryArgs, updateTicket]);
 
   const handleView = useCallback((ticket: Ticket) => setViewingTicket(ticket), []);
   const handleEditRequest = useCallback((ticket: Ticket) => setEditingTicket(ticket), []);
