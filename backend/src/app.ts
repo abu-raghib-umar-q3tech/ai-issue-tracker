@@ -12,7 +12,7 @@ interface HealthResponse {
 const app = express();
 
 app.use(cors({
-  origin: "*",
+  origin: env.clientUrl,
   credentials: true
 }));
 app.use(express.json());

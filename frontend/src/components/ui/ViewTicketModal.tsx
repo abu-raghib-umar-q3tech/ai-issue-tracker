@@ -209,7 +209,7 @@ const ViewTicketModal = ({ ticket, onClose, onEdit, onDelete }: ViewTicketModalP
                                     <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
                                         Created By
                                     </p>
-                                    <p className="text-sm font-medium text-slate-700">{ticket.createdBy.name}</p>
+                                    <p className="text-sm font-medium text-slate-700">{ticket.createdBy?.name ?? 'Unknown'}</p>
                                 </div>
                                 <div>
                                     <p className="mb-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">

@@ -73,7 +73,7 @@ const IssueCard = memo(({ ticket, canEdit, isUpdating, isConfirmingDelete, onVie
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-0.5">
         <p className="text-[11px] text-slate-400">
-          <span className="font-medium text-slate-500">Created by:</span>{' '}{ticket.createdBy.name}
+          <span className="font-medium text-slate-500">Created by:</span>{' '}{ticket.createdBy?.name ?? 'Unknown'}
         </p>
         <p className="text-[11px] text-slate-400">
           <span className="font-medium text-slate-500">Assigned to:</span>{' '}{ticket.assignedTo?.name ?? 'Unassigned'}
