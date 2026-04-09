@@ -2,11 +2,11 @@
 
 > A full-stack AI-powered issue and ticket tracking platform built with the MERN stack. Create tickets, analyze them with OpenAI (or a built-in rule-based fallback), manage workflow on a Kanban board, collaborate with comments, and monitor your team's progress on a real-time admin dashboard.
 
-| | Link |
-|---|---|
-| **Repository** | https://github.com/abu-raghib-umar-q3tech/ai-issue-tracker |
-| **Frontend** | https://ai-issue-tracker.vercel.app/ |
-| **Backend API** | https://ai-issue-tracker.onrender.com |
+|                 | Link                                                       |
+| --------------- | ---------------------------------------------------------- |
+| **Repository**  | https://github.com/abu-raghib-umar-q3tech/ai-issue-tracker |
+| **Frontend**    | https://ai-issue-tracker.vercel.app/                       |
+| **Backend API** | https://ai-issue-tracker.onrender.com                      |
 
 ---
 
@@ -34,7 +34,6 @@
   - [Activity](#activity)
   - [Notifications](#notifications)
   - [Users](#users)
-  - [Issues](#issues)
   - [Health](#health)
 - [AI Analysis](#ai-analysis)
 - [Real-time & Sockets](#real-time--sockets)
@@ -45,11 +44,11 @@
 
 ## Live Demo
 
-| | Link |
-|---|---|
-| **Repository** | [github.com/abu-raghib-umar-q3tech/ai-issue-tracker](https://github.com/abu-raghib-umar-q3tech/ai-issue-tracker) |
-| **Frontend** | [ai-issue-tracker.vercel.app](https://ai-issue-tracker.vercel.app/) |
-| **Backend API** | [ai-issue-tracker.onrender.com](https://ai-issue-tracker.onrender.com) |
+|                 | Link                                                                                                             |
+| --------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **Repository**  | [github.com/abu-raghib-umar-q3tech/ai-issue-tracker](https://github.com/abu-raghib-umar-q3tech/ai-issue-tracker) |
+| **Frontend**    | [ai-issue-tracker.vercel.app](https://ai-issue-tracker.vercel.app/)                                              |
+| **Backend API** | [ai-issue-tracker.onrender.com](https://ai-issue-tracker.onrender.com)                                           |
 
 ---
 
@@ -440,18 +439,6 @@ All protected routes require the `Authorization: Bearer <token>` header.
 
 ---
 
-### Issues
-
-| Method   | Path              | Auth         | Description     |
-| -------- | ----------------- | ------------ | --------------- |
-| `GET`    | `/api/issues`     | User         | List all issues |
-| `POST`   | `/api/issues`     | User         | Create an issue |
-| `GET`    | `/api/issues/:id` | User         | Get issue by ID |
-| `PUT`    | `/api/issues/:id` | User / Admin | Update an issue |
-| `DELETE` | `/api/issues/:id` | User / Admin | Delete an issue |
-
----
-
 ### Health
 
 | Method | Path          | Auth   | Description                  |
@@ -539,50 +526,3 @@ Set all [backend environment variables](#backend-env) in the host's secrets mana
 ### Database
 
 Use **MongoDB Atlas** for a managed cloud database. Copy the connection string into `MONGO_URI`. The application connects automatically on startup via `backend/src/config/db.ts`.
-
-## Frontend Setup
-
-1. Go to frontend:
-
-   ```bash
-   cd frontend
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   npm install
-   ```
-
-3. Create env file:
-
-   ```bash
-   cp .env.example .env
-   ```
-
-4. Run app:
-
-   ```bash
-   npm run dev
-   ```
-
-Frontend default: `http://localhost:5173`
-
-## MongoDB Troubleshooting
-
-If backend shows `ECONNREFUSED 127.0.0.1:27017`, MongoDB is not running locally.
-
-Options:
-
-1. Install and start MongoDB Community Server locally, then keep:
-   `MONGO_URI=mongodb://127.0.0.1:27017/issue_tracker`
-2. Use MongoDB Atlas and set `MONGO_URI` in `backend/.env` to your Atlas connection string.
-
-## API Endpoints
-
-- `GET /api/health`
-- `GET /api/issues`
-- `GET /api/issues/:id`
-- `POST /api/issues`
-- `PATCH /api/issues/:id`
-- `DELETE /api/issues/:id`

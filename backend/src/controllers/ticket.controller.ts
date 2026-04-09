@@ -189,8 +189,19 @@ const getTicketByIdHandler = asyncHandler(
       return;
     }
 
-    if (role !== 'admin' && ticket.createdBy.toString() !== userId) {
-      res.status(403).json({ message: 'Forbidden: you do not own this ticket' });
+    // After .populate(), these fields are Documents not raw ObjectIds —
+    // always use ._id.toString() to get the reliable hex string.
+    const createdById = (ticket.createdBy as unknown as { _id: { toString(): string } })?._id?.toString()
+      ?? ticket.createdBy.toString();
+    const assignedToId = (ticket.assignedTo as unknown as { _id: { toString(): string } } | null)?._id?.toString()
+      ?? ticket.assignedTo?.toString()
+      ?? null;
+
+    const isOwner = createdById === userId;
+    const isAssigned = assignedToId === userId;
+
+    if (role !== 'admin' && !isOwner && !isAssigned) {
+      res.status(403).json({ message: 'Forbidden: you do not have access to this ticket' });
       return;
     }
 

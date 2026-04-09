@@ -79,11 +79,24 @@ const ticketsApi = baseApi.injectEndpoints({
         method: 'PUT',
         body: data
       }),
-      invalidatesTags: (_result, _error, { id }) => [
-        { type: 'Tickets', id },
-        { type: 'Tickets', id: 'LIST' },
-        { type: 'Activity', id }
-      ],
+      invalidatesTags: (_result, _error, { id, data }) => {
+        // Skip full list re-fetch for status-only updates (Kanban drag) —
+        // the optimistic patch already reflects the new state.
+        const isStatusOnly =
+          data.status !== undefined &&
+          data.title === undefined &&
+          data.description === undefined &&
+          data.priority === undefined &&
+          data.tags === undefined &&
+          data.estimatedTime === undefined &&
+          data.assignedTo === undefined;
+
+        return [
+          { type: 'Tickets', id },
+          ...( isStatusOnly ? [] : [{ type: 'Tickets' as const, id: 'LIST' }] ),
+          { type: 'Activity', id }
+        ];
+      },
       async onQueryStarted(payload, { queryFulfilled }) {
         try {
           await queryFulfilled;
