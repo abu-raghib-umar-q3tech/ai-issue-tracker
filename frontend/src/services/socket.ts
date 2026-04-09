@@ -24,4 +24,8 @@ socket.on('disconnect', (reason) => {
     console.log('[socket] disconnected reason=', reason);
 });
 
+socket.on('connect_error', (err) => {
+    console.warn('[socket] connection error:', err.message);
+});
+
 export { socket };

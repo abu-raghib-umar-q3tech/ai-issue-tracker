@@ -16,9 +16,7 @@ class AppErrorBoundary extends Component<PropsWithChildren, AppErrorBoundaryStat
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    if (import.meta.env.DEV) {
-      console.error('AppErrorBoundary caught an error:', error, errorInfo);
-    }
+    console.error('AppErrorBoundary caught an error:', error, errorInfo);
   }
 
   public render() {
