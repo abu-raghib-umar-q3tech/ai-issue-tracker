@@ -131,7 +131,7 @@ const NotificationDropdown = () => {
                                         className={`w-full px-4 py-3 text-left transition-colors hover:bg-slate-50 ${!notification.isRead ? 'bg-sky-50/60' : ''}`}
                                         onClick={() => handleNotificationClick(
                                             notification._id,
-                                            notification.ticketId._id,
+                                            notification.ticketId?._id ?? '',
                                             notification.isRead
                                         )}
                                     >
@@ -145,7 +145,7 @@ const NotificationDropdown = () => {
                                                 <p className={`text-sm leading-snug ${!notification.isRead ? 'font-semibold text-slate-900' : 'font-normal text-slate-600'}`}>
                                                     {notification.message}
                                                 </p>
-                                                {notification.ticketId.title ? (
+                                                {notification.ticketId?.title ? (
                                                     <p className="mt-0.5 truncate text-xs text-slate-400">
                                                         {notification.ticketId.title}
                                                     </p>
